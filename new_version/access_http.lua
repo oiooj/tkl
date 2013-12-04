@@ -1,4 +1,3 @@
-ngx.req.read_body();
 local iswaf = ngx.shared.iswaf;
 local gpc = {};
 
@@ -22,7 +21,7 @@ for key,val in pairs(gpc) do
         if try ~= nil then
         	iswaf:replace(mem_key,try+1);
         else
-        	iswaf:safe_set(mem_key,data);
+        	iswaf:safe_set(mem_key,1);
         end
     end
 end
