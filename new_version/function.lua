@@ -1,7 +1,9 @@
 ruler = {};
 ruler['get'] = {"select.*from"};
 ruler['post'] = {'im.*test'};
+ruler['response'] = {'libaokun','yangtong'}
 logpath = '/tmp/';
+
 
 function arg2string(args) 
     result = '';
@@ -9,13 +11,16 @@ function arg2string(args)
     e = {"[(]+.*?[)]+","[']+.*?[']+",'["]+.*?["]+'}
     f = {'..[/]+..[/]+','[/]+[%a]+[/]+'};
     for key,val in pairs (args) do
+
         if type(val) == 'table' then 
             result = result..add..key..'=[%a:'..arg2string(val)..':]';
-        elseif ngx.re.find(val,table.concat( e,'|'),'isjo') then
+        elseif val == nil then
+            result = result..add..key..'=[%n]';
+        elseif type(val) == 'string' and ngx.re.find(val,table.concat( e,'|'),'isjo') then
             result = result..add..key..'=[%e]';
-        elseif ngx.re.find(val,'^[0-9]+$') then
+        elseif type(val) == 'string' and ngx.re.find(val,'^[0-9]+$') then
             result = result..add..key..'=[%d]';
-        elseif ngx.re.find(val,table.concat( f,'|'),'isjo') then
+        elseif type(val) == 'string' and ngx.re.find(val,table.concat( f,'|'),'isjo') then
             result = result..add..key..'=[%f]';
         else
             result = result..add..key..'=[%s]';
@@ -26,33 +31,37 @@ function arg2string(args)
 end
 
 
-function safe_check(value,ruler)
-    -- ngx.say(table.concat(value,'***')..table.concat(ruler,"|"));
+function safe_check(value,ruler,gpcpath)
 
+    if gpcpath == nil then
+        gpcpath = 'undefined';
+    end
     for key,value in pairs(value) do
         if type(value) == 'table' then
             value = table.concat(value,',');
         end
-        if ngx.re.find(key,table.concat(ruler,"|"),'isjo') or ngx.re.find(value,table.concat(ruler,"|"),'isjo') then
-            -- ngx.say('it works!')
+        if value ~= nil and type(value) == 'string' then
+            if ngx.re.find(key,table.concat(ruler,"|"),'isjo') or ngx.re.find(value,table.concat(ruler,"|"),'isjo') then
+                -- ngx.say('it works!')
 
-            ips = '';
-            add = '|';
-            for headerip in pairs({'X-Real-IP','CLIENT-IP','X-FORWARDED-FOR'}) do
-                tmp = ngx.req.get_headers()[headerip];
-                if tmp ~= nil then
-                    ips = ips..tmp..add;
+                ips = '';
+                add = '|';
+                for headerip in pairs({'X-Real-IP','CLIENT-IP','X-FORWARDED-FOR'}) do
+                    tmp = ngx.req.get_headers()[headerip];
+                    if tmp ~= nil then
+                        ips = ips..tmp..add;
+                    end
                 end
-            end
 
-            data = {};
-            data['gpc_path'] = 'get';
-            data['key'] = key;
-            data['value'] = value;
-            data['filename'] = ngx.var.uri;
-            data['remote_addr'] = ngx.var.remote_addr..ips;
-            log(logpath,data);
-            ngx.exit(403);
+                data = {};
+                data['gpc_path'] = gpcpath;
+                data['key'] = key;
+                data['value'] = value;
+                data['filename'] = ngx.var.uri;
+                data['remote_addr'] = ngx.var.remote_addr..ips;
+                log(logpath,data);
+                ngx.exit(403);
+            end
         end
     end
 end
